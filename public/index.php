@@ -1,176 +1,177 @@
 <?php
+
 // public/index.php
 declare(strict_types=1);
 
+use Phalcon\Loader;
 use Phalcon\Config;
 use Phalcon\Di\FactoryDefault;
 use Phalcon\Events\Event;
 use Phalcon\Events\Manager as EventsManager;
-use Phalcon\Loader;
+use Phalcon\Http\Request;
+use Phalcon\Http\Response;
 use Phalcon\Mvc\Application;
 use Phalcon\Mvc\Dispatcher;
-use Phalcon\Http\Response;
-use Phalcon\Http\Request;
+use Phalcon\Mvc\Router;
+use Phalcon\Mvc\View;
 use Phalcon\Url;
-// -------------------------------------------------
-// Autoload composer + carpetas de la app
-// -------------------------------------------------
-require dirname(__DIR__) . '/vendor/autoload.php';
+use Phalcon\Db\Adapter\Pdo\Postgresql;
+
+define('BASE_PATH', dirname(__DIR__));
+define('APP_PATH', BASE_PATH . '/app');
+
+// ----------------------------------------------------------------------------
+// Autoload Composer y carpetas de la app
+// ----------------------------------------------------------------------------
+require BASE_PATH . '/vendor/autoload.php';
 
 $loader = new Loader();
-$loader->registerDirs(
-    [
-        dirname(__DIR__) . '/app/controllers/',
-        dirname(__DIR__) . '/app/models/',
-        dirname(__DIR__) . '/app/middleware/',
-        dirname(__DIR__) . '/app/library/',
-    ]
-)->register();
 
-// -------------------------------------------------
-// DI container
-// -------------------------------------------------
+$loader->registerDirs([
+    APP_PATH . '/controllers/',
+    APP_PATH . '/models/',
+    APP_PATH . '/middleware/',
+    APP_PATH . '/library/',
+])->register();
+
+
+// ----------------------------------------------------------------------------
+// Contenedor DI
+// ----------------------------------------------------------------------------
 $di = new FactoryDefault();
 
-use Phalcon\Mvc\View;
+/**
+ * Config: reunimos el archivo app/config/config.php (credenciales DB y JWT)
+ * y añadimos ajustes de la app (baseUri) y de CORS.
+ */
+$di->setShared('config', function () {
+    $core = include APP_PATH . '/config/config.php';      // contiene 'database' y 'jwt'
+    $extra = new Config([
+        'app'  => ['baseUri' => '/api-rancing-salud-mental/'],
+        'cors' => ['allowedOrigins' => ['http://localhost:5173']],
+    ]);
+    return $core->merge($extra);
+});
 
+// ----------------------------------------------------------------------------
+// Servicios DI
+// ----------------------------------------------------------------------------
+
+// 1) Vista deshabilitada (evitamos el error con 'view')
 $di->setShared('view', function () {
-    $view = new View();   // objeto requerido por el framework
-    $view->disable();     // no genera ninguna salida HTML
+    $view = new View();
+    $view->disable();
     return $view;
 });
 
-/**
- * Config global (carga tu propio archivo YML/ENV si lo tienes)
- */
-$di->setShared('config', function () {
-    return new Config([
-        'app' => [
-            'baseUri' => '/api-rancing-salud-mental/',   // ← aquí
-        ],
-        'cors' => [
-            'allowedOrigins' => ['http://localhost:5173'],
-        ],
-    ]);
-});
-
+// 2) URL (baseUri usado por el router internamente)
 $di->setShared('url', function () use ($di) {
     $url = new Url();
     $url->setBaseUri($di->getShared('config')->app->baseUri);
     return $url;
 });
-/**
- * Servicios clásicos: router, db, seguridad, etc.
- *  — aquí solo se muestra Router como ejemplo —
- */
+
+// 3) Base de datos (PostgreSQL)
+$di->setShared('db', function () use ($di) {
+
+    // Tomamos los datos del archivo app/config/config.php
+    $cfg = $di->getShared('config')->database->toArray();
+
+    // Elimina la entrada 'adapter' si existe
+    unset($cfg['adapter']);
+
+    return new Postgresql($cfg);
+});
+// 4) Router
 $di->setShared('router', function () {
-    $router = new \Phalcon\Mvc\Router(false);
+    $router = new Router(false);
     $router->removeExtraSlashes(true);
 
+    // Endpoint de registro
     $router->addPost(
-        '/api-rancing-salud-mental/api/auth/register',   // ← cambia aquí
+        '/api-rancing-salud-mental/api/auth/register',
         [
             'controller' => 'auth',
             'action'     => 'register',
         ]
     );
 
+    // Puedes añadir más rutas aquí …
 
-    // … agrega las demás rutas
     return $router;
 });
 
-// -------------------------------------------------
+
+// ----------------------------------------------------------------------------
 // Middleware CORS
-// -------------------------------------------------
+// ----------------------------------------------------------------------------
 class CorsMiddleware
 {
     public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher): bool
     {
-        /** @var Request $request */
-        $request = $dispatcher->getDI()->getShared('request');
-        /** @var Response $response */
-        $response = $dispatcher->getDI()->getShared('response');
-        /** @var Config $config */
-        $config = $dispatcher->getDI()->getShared('config');
+        $di        = $dispatcher->getDI();
+        $request   = $di->getShared('request');
+        $response  = $di->getShared('response');
+        $config    = $di->getShared('config');
+        $origin    = $request->getHeader('Origin');
+        $whitelist = $config->cors->allowedOrigins->toArray();
 
-        $originHeader = $request->getHeader('Origin');
-        $allowedOrigins = $config->cors->allowedOrigins->toArray();
-
-        // Si el origen está autorizado, envía encabezados CORS específicos
-        if ($originHeader && in_array($originHeader, $allowedOrigins, true)) {
-            $response->setHeader('Access-Control-Allow-Origin', $originHeader);
+        if ($origin && in_array($origin, $whitelist, true)) {
+            $response->setHeader('Access-Control-Allow-Origin', $origin);
         }
 
-        // Siempre: métodos, headers y credenciales
         $response
             ->setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
-            ->setHeader(
-                'Access-Control-Allow-Headers',
-                'Content-Type, Authorization, X-Requested-With'
-            )
+            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
             ->setHeader('Access-Control-Allow-Credentials', 'true')
-            ->setHeader('Vary', 'Origin'); // evita mezcla de caché por proxy
+            ->setHeader('Vary', 'Origin');
 
         // Pre-flight
         if ($request->getMethod() === 'OPTIONS') {
             $response->setStatusCode(204, 'No Content')->send();
-            return false; // corta la petición
+            return false;  // detiene el flujo
         }
-
         return true;
     }
 }
 
-// -------------------------------------------------
-// Aplicación MVC
-// -------------------------------------------------
+// ----------------------------------------------------------------------------
+// Boot de la aplicación
+// ----------------------------------------------------------------------------
 $application   = new Application($di);
 $eventsManager = new EventsManager();
 
-// Adjunta el middleware en el evento adecuado
+// Inyectamos middleware y manejador de excepciones
 $eventsManager->attach('dispatch:beforeExecuteRoute', new CorsMiddleware());
 
-// Manejo de excepciones no atrapadas → JSON
 $eventsManager->attach('application:beforeException', function (
     Event $event,
     Application $app,
-    \Throwable $exception
+    Throwable $ex
 ) {
-    /** @var Response $response */
-    $response = $app->di->getShared('response');
-
-    $response->setStatusCode(
-        $exception->getCode() >= 400 ? $exception->getCode() : 500,
-        'Error'
-    )->setJsonContent(
-        [
+    $resp = $app->di->getShared('response');
+    $resp->setStatusCode($ex->getCode() >= 400 ? $ex->getCode() : 500, 'Error')
+        ->setJsonContent([
             'success' => false,
-            'message' => $exception->getMessage(),
-        ]
-    )->send();
-
-    // evita que Phalcon siga procesando
-    return false;
+            'message' => $ex->getMessage(),
+        ])
+        ->send();
+    return false;   // evita que Phalcon siga procesando
 });
 
 $application->setEventsManager($eventsManager);
 
-// -------------------------------------------------
-// Despacha la petición
-// -------------------------------------------------
+// ----------------------------------------------------------------------------
+// Despacho
+// ----------------------------------------------------------------------------
 try {
-    $response = $application->handle($_SERVER['REQUEST_URI']);
-    $response->send();
-} catch (\Throwable $e) {
-    // fallback por si falla el beforeException
+    $application->handle($_SERVER['REQUEST_URI'])->send();
+} catch (Throwable $e) {
     $di->getShared('response')
         ->setStatusCode(500, 'Internal Server Error')
-        ->setJsonContent(
-            [
-                'success' => false,
-                'message' => 'Unhandled exception: ' . $e->getMessage(),
-            ]
-        )
+        ->setJsonContent([
+            'success' => false,
+            'message' => 'Unhandled exception: ' . $e->getMessage(),
+        ])
         ->send();
 }

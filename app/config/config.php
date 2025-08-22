@@ -1,16 +1,26 @@
 <?php
-return new \Phalcon\Config([
+
+use Phalcon\Config;
+
+return new Config([
     'database' => [
-        'adapter'  => 'Postgresql',
-        'host'     => 'localhost',
+        'host'     => '127.0.0.1',   // o 'localhost'
+        'port'     => 5432,
         'username' => 'postgres',
         'password' => '241302',
         'dbname'   => 'rancing_salud_mental',
-        'charset'  => 'utf8',
-        'port'     => 5432
+
+        // Opcionales y válidos en Postgres:
+        // 'schema' => 'public',
+        // 'client_encoding' => 'UTF8',
+
+        // Opciones PDO recomendadas
+        'options'  => [
+            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+        ],
     ],
     'jwt' => [
         'secret' => 'tu_jwt_secret_key_super_segura_2024',
-        'expire' => 86400 // 24 horas
-    ]
+        'expire' => 86400, // 24 horas
+    ],
 ]);

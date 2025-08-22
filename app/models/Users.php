@@ -22,7 +22,7 @@ class Users extends Model
         $this->setSource('users');
 
         // Especificar secuencia para PostgreSQL
-        $this->setSequenceName('users_id_seq');
+        //$this->setSequenceName('users_id_seq');
     }
 
     public function beforeValidationOnCreate()

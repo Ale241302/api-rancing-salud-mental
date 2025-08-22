@@ -4,24 +4,30 @@ use Phalcon\Mvc\Controller;
 
 class BaseController extends Controller
 {
-    protected function jsonResponse($data, $code = 200, $message = 'OK')
+    protected function jsonResponse($data = null, int $code = 200, string $msg = '')
     {
-        $this->response->setStatusCode($code, $message);
-        $this->response->setContentType('application/json', 'UTF-8');
+        /** @var \Phalcon\Http\Response $resp */
+        $resp = $this->response;
 
-        $response = [
-            'success' => $code < 400,
-            'code' => $code,
-            'message' => $message
-        ];
-
-        if ($data !== null) {
-            $response['data'] = $data;
+        // 1. Cabeceras CORS definitivas
+        $origin = $this->request->getHeader('Origin');
+        if ($origin === 'http://localhost:5173') {
+            $resp->setHeader('Access-Control-Allow-Origin', $origin)
+                ->setHeader('Access-Control-Allow-Credentials', 'true')
+                ->setHeader('Vary', 'Origin');
         }
 
-        $this->response->setJsonContent($response);
-        return $this->response;
+        // 2. Cuerpo JSON
+        return $resp
+            ->setStatusCode($code)
+            ->setJsonContent([
+                'success' => $code < 400,
+                'code'    => $code,
+                'message' => $msg,
+                'data'    => $data,
+            ]);
     }
+
 
     protected function jsonError($message, $code = 400)
     {
