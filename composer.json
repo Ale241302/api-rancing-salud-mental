@@ -1,0 +1,16 @@
+{
+    "name": "rancing-salud-mental/api",
+    "description": "API Backend para Rancing Salud Mental",
+    "require": {
+        "php": ">=7.0",
+        "phalcon/devtools": "^3.4",
+        "firebase/php-jwt": "^6.0",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    }
+}

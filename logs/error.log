@@ -1,0 +1,55 @@
+[22-Aug-2025 18:16:48 Europe/Berlin] === INICIO DE PETICION API ===
+[22-Aug-2025 18:16:48 Europe/Berlin] Timestamp: 2025-08-22 18:16:48
+[22-Aug-2025 18:16:48 Europe/Berlin] Request URI: /api-rancing-salud-mental/api/test
+[22-Aug-2025 18:16:48 Europe/Berlin] Request Method: GET
+[22-Aug-2025 18:16:48 Europe/Berlin] Cargando dependencias...
+[22-Aug-2025 18:16:48 Europe/Berlin] DI container creado
+[22-Aug-2025 18:16:48 Europe/Berlin] Micro app creada
+[22-Aug-2025 18:16:48 Europe/Berlin] Ejecutando app->handle()...
+[22-Aug-2025 18:16:48 Europe/Berlin] Ejecutando GET /api/test
+[22-Aug-2025 18:16:48 Europe/Berlin] Configurando conexión PostgreSQL...
+[22-Aug-2025 18:16:48 Europe/Berlin] Conexión PostgreSQL establecida
+[22-Aug-2025 18:16:48 Europe/Berlin] Test exitoso, users_count: 0
+[22-Aug-2025 18:16:48 Europe/Berlin] app->handle() completado
+[22-Aug-2025 18:16:48 Europe/Berlin] === FIN DE PETICION API ===
+[22-Aug-2025 18:16:48 Europe/Berlin] === INICIO DE PETICION API ===
+[22-Aug-2025 18:16:48 Europe/Berlin] Timestamp: 2025-08-22 18:16:48
+[22-Aug-2025 18:16:48 Europe/Berlin] Request URI: /api-rancing-salud-mental/api/auth/register
+[22-Aug-2025 18:16:48 Europe/Berlin] Request Method: POST
+[22-Aug-2025 18:16:48 Europe/Berlin] Cargando dependencias...
+[22-Aug-2025 18:16:48 Europe/Berlin] DI container creado
+[22-Aug-2025 18:16:48 Europe/Berlin] Micro app creada
+[22-Aug-2025 18:16:48 Europe/Berlin] Ejecutando app->handle()...
+[22-Aug-2025 18:16:48 Europe/Berlin] === INICIO POST /api/auth/register ===
+[22-Aug-2025 18:16:48 Europe/Berlin] Raw body recibido: {"email":"test@example.com","password":"test123","first_name":"Test","last_name":"User"}
+[22-Aug-2025 18:16:48 Europe/Berlin] Input decodificado: {"email":"test@example.com","password":"test123","first_name":"Test","last_name":"User"}
+[22-Aug-2025 18:16:48 Europe/Berlin] Validaciones pasadas, obteniendo servicios...
+[22-Aug-2025 18:16:48 Europe/Berlin] Configurando conexión PostgreSQL...
+[22-Aug-2025 18:16:48 Europe/Berlin] Conexión PostgreSQL establecida
+[22-Aug-2025 18:16:48 Europe/Berlin] DB service obtenido
+[22-Aug-2025 18:16:48 Europe/Berlin] Configurando Security...
+[22-Aug-2025 18:16:48 Europe/Berlin] Security service obtenido
+[22-Aug-2025 18:16:48 Europe/Berlin] Email procesado: test@example.com
+[22-Aug-2025 18:16:48 Europe/Berlin] Verificando si email ya existe...
+[22-Aug-2025 18:16:48 Europe/Berlin] Query: SELECT id FROM users WHERE email = $1
+[22-Aug-2025 18:16:48 Europe/Berlin] Parámetros: [test@example.com]
+[22-Aug-2025 18:16:48 Europe/Berlin] ERROR en consulta de verificación: SQLSTATE[08P01]: <<Unknown error>>: 7 ERROR:  el mensaje de «bind» entrega 0 parámetros, pero la sentencia preparada «pdo_stmt_00000001» requiere 1
+[22-Aug-2025 18:16:48 Europe/Berlin] Error trace: #0 [internal function]: PDOStatement->execute()
+#1 [internal function]: Phalcon\Db\Adapter\Pdo->executePrepared(Object(PDOStatement), Array, Array)
+#2 [internal function]: Phalcon\Db\Adapter\Pdo->query('SELECT id FROM ...', NULL, NULL)
+#3 C:\xampp\htdocs\api-rancing-salud-mental\public\index.php(167): Phalcon\Db\Adapter->fetchOne('SELECT id FROM ...', Array)
+#4 [internal function]: Closure->{closure}()
+#5 C:\xampp\htdocs\api-rancing-salud-mental\public\index.php(308): Phalcon\Mvc\Micro->handle()
+#6 {main}
+[22-Aug-2025 18:16:48 Europe/Berlin] ERROR FATAL en registro: SQLSTATE[08P01]: <<Unknown error>>: 7 ERROR:  el mensaje de «bind» entrega 0 parámetros, pero la sentencia preparada «pdo_stmt_00000001» requiere 1
+[22-Aug-2025 18:16:48 Europe/Berlin] Error file: C:\xampp\htdocs\api-rancing-salud-mental\public\index.php
+[22-Aug-2025 18:16:48 Europe/Berlin] Error line: 167
+[22-Aug-2025 18:16:48 Europe/Berlin] Error trace: #0 [internal function]: PDOStatement->execute()
+#1 [internal function]: Phalcon\Db\Adapter\Pdo->executePrepared(Object(PDOStatement), Array, Array)
+#2 [internal function]: Phalcon\Db\Adapter\Pdo->query('SELECT id FROM ...', NULL, NULL)
+#3 C:\xampp\htdocs\api-rancing-salud-mental\public\index.php(167): Phalcon\Db\Adapter->fetchOne('SELECT id FROM ...', Array)
+#4 [internal function]: Closure->{closure}()
+#5 C:\xampp\htdocs\api-rancing-salud-mental\public\index.php(308): Phalcon\Mvc\Micro->handle()
+#6 {main}
+[22-Aug-2025 18:16:48 Europe/Berlin] app->handle() completado
+[22-Aug-2025 18:16:48 Europe/Berlin] === FIN DE PETICION API ===
