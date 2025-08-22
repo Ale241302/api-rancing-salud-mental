@@ -95,6 +95,19 @@ $di->setShared('router', function () {
             'action'     => 'register',
         ]
     );
+    // ─── LOGIN ──────────────────────────────────────────────
+    $router->addPost(
+        '/api-rancing-salud-mental/api/auth/login',
+        [
+            'controller' => 'auth',
+            'action'     => 'login',
+        ]
+    );
+    $router->addGet('/api-rancing-salud-mental/api/auth/profile', [
+        'controller' => 'auth',
+        'action'     => 'profile',
+    ]);
+
 
     // Puedes añadir más rutas aquí …
 
@@ -158,7 +171,14 @@ $eventsManager->attach('application:beforeException', function (
         ->send();
     return false;   // evita que Phalcon siga procesando
 });
-
+$eventsManager->attach('application:beforeSendResponse', function ($event, $app, $response) {
+    $origin = $app->di->getShared('request')->getHeader('Origin');
+    if ($origin === 'http://localhost:5173') {
+        $response->setHeader('Access-Control-Allow-Origin', $origin)
+            ->setHeader('Access-Control-Allow-Credentials', 'true')
+            ->setHeader('Vary', 'Origin');
+    }
+});
 $application->setEventsManager($eventsManager);
 
 // ----------------------------------------------------------------------------
