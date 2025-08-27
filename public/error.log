@@ -1,0 +1,41 @@
+[27-Aug-2025 18:35:21 Europe/Berlin] Login Error: SQLSTATE[08006] [7] invalid connection option "charset"
+[27-Aug-2025 18:35:22 Europe/Berlin] Login Error: SQLSTATE[08006] [7] invalid connection option "charset"
+[27-Aug-2025 18:35:39 Europe/Berlin] Login Error: SQLSTATE[08006] [7] invalid connection option "charset"
+[27-Aug-2025 18:36:37 Europe/Berlin] ERROR: syntax error, unexpected ')', expecting ']' in C:\xampp\htdocs\api-rancing-salud-mental\app\config\config.php:31
+[27-Aug-2025 18:37:01 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 18:37:14 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 18:45:17 Europe/Berlin] Listar Eventos Error: Column 'imagen_perfil' doesn't make part of the column map
+[27-Aug-2025 18:48:41 Europe/Berlin] Listar Eventos Error: Column 'imagen_perfil' doesn't make part of the column map
+[27-Aug-2025 20:27:22 Europe/Berlin] ERROR: syntax error, unexpected ''imagenes_evento'' (T_CONSTANT_ENCAPSED_STRING), expecting function (T_FUNCTION) or const (T_CONST) in C:\xampp\htdocs\api-rancing-salud-mental\app\controllers\AuthController.php:867
+[27-Aug-2025 20:28:09 Europe/Berlin] ERROR: Call to undefined method AuthController::processImagenesEvento() in C:\xampp\htdocs\api-rancing-salud-mental\app\controllers\AuthController.php:824
+[27-Aug-2025 21:24:25 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 21:24:36 Europe/Berlin] User logged out: alejandro.casierra@devyou.co
+[27-Aug-2025 21:24:45 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 21:47:06 Europe/Berlin] User logged out: alejandro.casierra@devyou.co
+[27-Aug-2025 21:47:24 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 21:49:23 Europe/Berlin] User logged out: alejandro.casierra@devyou.co
+[27-Aug-2025 21:49:44 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 21:52:51 Europe/Berlin] User logged out: alejandro.casierra@devyou.co
+[27-Aug-2025 21:53:41 Europe/Berlin] Login successful: alejandro2.casierra@devyou.co
+[27-Aug-2025 21:53:50 Europe/Berlin] Login successful: alejandro2.casierra@devyou.co
+[27-Aug-2025 22:01:27 Europe/Berlin] User logged out: alejandro2.casierra@devyou.co
+[27-Aug-2025 22:01:38 Europe/Berlin] Login successful: alejandro2.casierra@devyou.co
+[27-Aug-2025 22:09:20 Europe/Berlin] Card created/updated successfully for user: 14
+[27-Aug-2025 22:09:41 Europe/Berlin] User logged out: alejandro2.casierra@devyou.co
+[27-Aug-2025 22:10:07 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 22:19:02 Europe/Berlin] Card created/updated successfully for user: 13
+[27-Aug-2025 22:19:03 Europe/Berlin] Event registration successful - User: 13, Event: 1, Amount: 250
+[27-Aug-2025 22:29:33 Europe/Berlin] User logged out: alejandro.casierra@devyou.co
+[27-Aug-2025 22:29:51 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 22:29:59 Europe/Berlin] Card created/updated successfully for user: 13
+[27-Aug-2025 22:32:08 Europe/Berlin] Login successful: alejandro2.casierra@devyou.co
+[27-Aug-2025 22:34:12 Europe/Berlin] User logged out: alejandro.casierra@devyou.co
+[27-Aug-2025 22:34:26 Europe/Berlin] Login successful: alejandro2.casierra@devyou.co
+[27-Aug-2025 22:37:08 Europe/Berlin] ERROR: Call to undefined method AuthController::getUserFromToken() in C:\xampp\htdocs\api-rancing-salud-mental\app\controllers\AuthController.php:477
+[27-Aug-2025 22:37:32 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 22:37:33 Europe/Berlin] ERROR: Call to undefined method AuthController::getUserFromToken() in C:\xampp\htdocs\api-rancing-salud-mental\app\controllers\AuthController.php:477
+[27-Aug-2025 22:41:16 Europe/Berlin] Login successful: alejandro.casierra@devyou.co
+[27-Aug-2025 22:41:25 Europe/Berlin] Card created/updated successfully for user: 13
+[27-Aug-2025 22:41:26 Europe/Berlin] Event registration successful - User: 13, Event: 1, Amount: 250, Cupos restantes: 41
+[27-Aug-2025 22:45:15 Europe/Berlin] User logged out: alejandro.casierra@devyou.co
+[27-Aug-2025 22:45:25 Europe/Berlin] Login successful: alejandro.casierra@devyou.co

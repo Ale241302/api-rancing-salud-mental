@@ -8,8 +8,8 @@ use Phalcon\Crypt;
 $di->setShared('db', function () {
     return new Postgresql([
         'host'     => 'localhost',
-        'username' => 'tu_usuario',
-        'password' => 'tu_password',
+        'username' => 'postgres',
+        'password' => '241302',
         'dbname'   => 'rancing_salud_mental',
         'charset'  => 'utf8',
         'port'     => 5432

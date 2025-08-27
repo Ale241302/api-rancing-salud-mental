@@ -1,18 +1,19 @@
 <?php
 
-// public/index.php
 declare(strict_types=1);
+
+// ✅ DEBUGGING DESPUÉS de declare
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+ini_set('log_errors', '1');
+ini_set('error_log', dirname(__FILE__) . '/error.log');
 
 use Phalcon\Loader;
 use Phalcon\Config;
 use Phalcon\Di\FactoryDefault;
-use Phalcon\Events\Event;
 use Phalcon\Events\Manager as EventsManager;
-use Phalcon\Http\Request;
-use Phalcon\Http\Response;
 use Phalcon\Mvc\Application;
-use Phalcon\Mvc\Dispatcher;
-use Phalcon\Mvc\Router;
 use Phalcon\Mvc\View;
 use Phalcon\Url;
 use Phalcon\Db\Adapter\Pdo\Postgresql;
@@ -21,12 +22,11 @@ define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');
 
 // ----------------------------------------------------------------------------
-// Autoload Composer y carpetas de la app
+// Autoload
 // ----------------------------------------------------------------------------
 require BASE_PATH . '/vendor/autoload.php';
 
 $loader = new Loader();
-
 $loader->registerDirs([
     APP_PATH . '/controllers/',
     APP_PATH . '/models/',
@@ -34,164 +34,97 @@ $loader->registerDirs([
     APP_PATH . '/library/',
 ])->register();
 
-
 // ----------------------------------------------------------------------------
 // Contenedor DI
 // ----------------------------------------------------------------------------
 $di = new FactoryDefault();
 
-/**
- * Config: reunimos el archivo app/config/config.php (credenciales DB y JWT)
- * y añadimos ajustes de la app (baseUri) y de CORS.
- */
+// Config
 $di->setShared('config', function () {
-    $core = include APP_PATH . '/config/config.php';      // contiene 'database' y 'jwt'
-    $extra = new Config([
-        'app'  => ['baseUri' => '/api-rancing-salud-mental/'],
-        'cors' => ['allowedOrigins' => ['http://localhost:5173']],
-    ]);
-    return $core->merge($extra);
+    return include APP_PATH . '/config/config.php';
 });
 
-// ----------------------------------------------------------------------------
-// Servicios DI
-// ----------------------------------------------------------------------------
-
-// 1) Vista deshabilitada (evitamos el error con 'view')
+// Vista deshabilitada
 $di->setShared('view', function () {
     $view = new View();
     $view->disable();
     return $view;
 });
 
-// 2) URL (baseUri usado por el router internamente)
+// URL
 $di->setShared('url', function () use ($di) {
     $url = new Url();
     $url->setBaseUri($di->getShared('config')->app->baseUri);
     return $url;
 });
 
-// 3) Base de datos (PostgreSQL)
+// Base de datos
 $di->setShared('db', function () use ($di) {
-
-    // Tomamos los datos del archivo app/config/config.php
     $cfg = $di->getShared('config')->database->toArray();
-
-    // Elimina la entrada 'adapter' si existe
     unset($cfg['adapter']);
-
     return new Postgresql($cfg);
 });
-// 4) Router
-$di->setShared('router', function () {
-    $router = new Router(false);
-    $router->removeExtraSlashes(true);
 
-    // Endpoint de registro
-    $router->addPost(
-        '/api-rancing-salud-mental/api/auth/register',
-        [
-            'controller' => 'auth',
-            'action'     => 'register',
-        ]
-    );
-    // ─── LOGIN ──────────────────────────────────────────────
-    $router->addPost(
-        '/api-rancing-salud-mental/api/auth/login',
-        [
-            'controller' => 'auth',
-            'action'     => 'login',
-        ]
-    );
-    $router->addGet('/api-rancing-salud-mental/api/auth/profile', [
-        'controller' => 'auth',
-        'action'     => 'profile',
-    ]);
-
-
-    // Puedes añadir más rutas aquí …
-
-    return $router;
-});
-
-
-// ----------------------------------------------------------------------------
-// Middleware CORS
-// ----------------------------------------------------------------------------
-class CorsMiddleware
+// ✅ CORS DIRECTO (sin middleware problemático)
+function handleCors(): void
 {
-    public function beforeExecuteRoute(Event $event, Dispatcher $dispatcher): bool
-    {
-        $di        = $dispatcher->getDI();
-        $request   = $di->getShared('request');
-        $response  = $di->getShared('response');
-        $config    = $di->getShared('config');
-        $origin    = $request->getHeader('Origin');
-        $whitelist = $config->cors->allowedOrigins->toArray();
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
-        if ($origin && in_array($origin, $whitelist, true)) {
-            $response->setHeader('Access-Control-Allow-Origin', $origin);
-        }
+    $allowedOrigins = [
+        'http://localhost:5173',
+        'http://localhost:3000',
+        'http://127.0.0.1:5173'
+    ];
 
-        $response
-            ->setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
-            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-            ->setHeader('Access-Control-Allow-Credentials', 'true')
-            ->setHeader('Vary', 'Origin');
+    if (in_array($origin, $allowedOrigins)) {
+        header("Access-Control-Allow-Origin: $origin");
+    } else {
+        header("Access-Control-Allow-Origin: *");
+    }
 
-        // Pre-flight
-        if ($request->getMethod() === 'OPTIONS') {
-            $response->setStatusCode(204, 'No Content')->send();
-            return false;  // detiene el flujo
-        }
-        return true;
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Origin, Accept');
+    header('Access-Control-Allow-Credentials: true');
+
+    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+        http_response_code(204);
+        exit();
     }
 }
 
+handleCors();
+
 // ----------------------------------------------------------------------------
-// Boot de la aplicación
+// Aplicación
 // ----------------------------------------------------------------------------
-$application   = new Application($di);
+$application = new Application($di);
 $eventsManager = new EventsManager();
 
-// Inyectamos middleware y manejador de excepciones
-$eventsManager->attach('dispatch:beforeExecuteRoute', new CorsMiddleware());
+// ✅ CARGAR SOLO EL ROUTER (sin CorsMiddleware)
+require_once APP_PATH . '/config/router.php';
 
-$eventsManager->attach('application:beforeException', function (
-    Event $event,
-    Application $app,
-    Throwable $ex
-) {
-    $resp = $app->di->getShared('response');
-    $resp->setStatusCode($ex->getCode() >= 400 ? $ex->getCode() : 500, 'Error')
-        ->setJsonContent([
-            'success' => false,
-            'message' => $ex->getMessage(),
-        ])
-        ->send();
-    return false;   // evita que Phalcon siga procesando
-});
-$eventsManager->attach('application:beforeSendResponse', function ($event, $app, $response) {
-    $origin = $app->di->getShared('request')->getHeader('Origin');
-    if ($origin === 'http://localhost:5173') {
-        $response->setHeader('Access-Control-Allow-Origin', $origin)
-            ->setHeader('Access-Control-Allow-Credentials', 'true')
-            ->setHeader('Vary', 'Origin');
-    }
-});
 $application->setEventsManager($eventsManager);
 
 // ----------------------------------------------------------------------------
-// Despacho
+// Manejo de errores mejorado
 // ----------------------------------------------------------------------------
 try {
-    $application->handle($_SERVER['REQUEST_URI'])->send();
+    echo $application->handle($_SERVER['REQUEST_URI'])->getContent();
 } catch (Throwable $e) {
-    $di->getShared('response')
-        ->setStatusCode(500, 'Internal Server Error')
-        ->setJsonContent([
-            'success' => false,
-            'message' => 'Unhandled exception: ' . $e->getMessage(),
-        ])
-        ->send();
+    handleCors();
+    http_response_code(500);
+    header('Content-Type: application/json');
+
+    echo json_encode([
+        'success' => false,
+        'code' => 500,
+        'message' => 'Error interno: ' . $e->getMessage(),
+        'debug' => [
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => array_slice(explode("\n", $e->getTraceAsString()), 0, 5)
+        ]
+    ], JSON_PRETTY_PRINT);
+
+    error_log("ERROR: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
 }

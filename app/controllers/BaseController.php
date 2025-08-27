@@ -6,18 +6,18 @@ class BaseController extends Controller
 {
     protected function jsonResponse($data = null, int $code = 200, string $msg = '')
     {
-        /** @var \Phalcon\Http\Response $resp */
         $resp = $this->response;
 
-        // 1. Cabeceras CORS definitivas
+        // CORS headers
         $origin = $this->request->getHeader('Origin');
-        if ($origin === 'http://localhost:5173') {
+        if ($origin) {
             $resp->setHeader('Access-Control-Allow-Origin', $origin)
                 ->setHeader('Access-Control-Allow-Credentials', 'true')
                 ->setHeader('Vary', 'Origin');
+        } else {
+            $resp->setHeader('Access-Control-Allow-Origin', '*');
         }
 
-        // 2. Cuerpo JSON
         return $resp
             ->setStatusCode($code)
             ->setJsonContent([
@@ -27,7 +27,6 @@ class BaseController extends Controller
                 'data'    => $data,
             ]);
     }
-
 
     protected function jsonError($message, $code = 400)
     {
