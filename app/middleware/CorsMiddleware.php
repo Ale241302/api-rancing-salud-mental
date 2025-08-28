@@ -11,27 +11,17 @@ class CorsMiddleware
         $di = $dispatcher->getDI();
         $request = $di->getShared('request');
         $response = $di->getShared('response');
-        $origin = $request->getHeader('Origin');
 
-        $allowedOrigins = [
-            'http://localhost:5173',
-            'http://localhost:3000',
-            'http://127.0.0.1:5173'
-        ];
-
-        if ($origin && in_array($origin, $allowedOrigins)) {
-            $response->setHeader('Access-Control-Allow-Origin', $origin);
-        } else {
-            $response->setHeader('Access-Control-Allow-Origin', '*');
-        }
-
+        // ✅ PERMITIR CUALQUIER ORIGEN - Sin restricciones
         $response
-            ->setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS')
-            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-            ->setHeader('Access-Control-Allow-Credentials', 'true');
+            ->setHeader('Access-Control-Allow-Origin', '*')
+            ->setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+            ->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Origin, Accept, Cache-Control, X-HTTP-Method-Override')
+            ->setHeader('Access-Control-Max-Age', '86400'); // Cache preflight 24h
 
+        // ✅ MANEJAR PREFLIGHT OPTIONS
         if ($request->getMethod() === 'OPTIONS') {
-            $response->setStatusCode(204)->send();
+            $response->setStatusCode(200)->send(); // Cambiar de 204 a 200
             return false;
         }
 

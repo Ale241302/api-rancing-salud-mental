@@ -7,9 +7,8 @@
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
     # ========= 2. Pre-flight OPTIONS =========
-    # Si es una petición OPTIONS, responde 204 y NO reescribas.
     RewriteCond %{REQUEST_METHOD} =OPTIONS
-    RewriteRule ^ - [R=204,L]
+    RewriteRule ^ - [R=200,L]  # ✅ Cambiar a 200
 
     # ========= 3. Reescritura de rutas Phalcon =========
     RewriteCond %{REQUEST_FILENAME} !-f
@@ -18,13 +17,12 @@
 </IfModule>
 
 <IfModule mod_headers.c>
-    # ========= 4. Encabezados CORS =========
-    # Sustituye el origen por el dominio de tu frontend (sin /* ni comodines).
-    SetEnvIf Origin "http(s)?://localhost:5173$" ACAOrigin=$0
-
-    Header always set Access-Control-Allow-Origin "%{ACAOrigin}e" env=ACAOrigin
-    Header always set Vary "Origin" env=ACAOrigin
-    Header always set Access-Control-Allow-Credentials "true" env=ACAOrigin
+    # ========= 4. CORS COMPLETAMENTE ABIERTO =========
+    Header always set Access-Control-Allow-Origin "*"
     Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With, Origin, Accept, Cache-Control"
+    Header always set Access-Control-Max-Age "86400"
+    
+    # ❌ IMPORTANTE: NO usar Access-Control-Allow-Credentials con "*"
+    # Header always set Access-Control-Allow-Credentials "true"  # ← COMENTAR ESTA LÍNEA
 </IfModule>

@@ -68,26 +68,17 @@ $di->setShared('db', function () use ($di) {
 // ✅ CORS DIRECTO (sin middleware problemático)
 function handleCors(): void
 {
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    // ✅ PERMITIR CUALQUIER ORIGEN (IP, dominio, puerto)
+    header("Access-Control-Allow-Origin: *");
 
-    $allowedOrigins = [
-        'http://localhost:5173',
-        'http://localhost:3000',
-        'http://127.0.0.1:5173'
-    ];
-
-    if (in_array($origin, $allowedOrigins)) {
-        header("Access-Control-Allow-Origin: $origin");
-    } else {
-        header("Access-Control-Allow-Origin: *");
-    }
-
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH');
     header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Origin, Accept');
-    header('Access-Control-Allow-Credentials: true');
+
+    // ❌ IMPORTANTE: Comentar esta línea - No compatible con *
+    // header('Access-Control-Allow-Credentials: true');
 
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        http_response_code(204);
+        http_response_code(200);
         exit();
     }
 }
