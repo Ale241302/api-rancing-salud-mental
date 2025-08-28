@@ -88,128 +88,153 @@ class AuthController extends BaseController
         }
     }
 
-    /**
-     * Inicio de sesión
-     * POST /api/auth/login
-     */
     public function creartarjetaAction()
     {
         try {
-            $input = $this->getJsonInput();
-
-            // Validar que se reciban los datos requeridos
-            if (
-                !$input || !isset($input['id_user']) || !isset($input['numero_tarjeta']) ||
-                !isset($input['vencimiento_tarjeta']) || !isset($input['cvc_tarjeta']) ||
-                !isset($input['nombre_tarjeta'])
-            ) {
-                return $this->jsonError('Todos los campos de la tarjeta son requeridos', 400);
+            $in = $this->getJsonInput();
+            if (!$in) {
+                return $this->jsonError('Datos JSON inválidos', 400);
             }
 
-            $idUser = (int)$input['id_user'];
-            $numeroTarjeta = trim($input['numero_tarjeta']);
-            $vencimientoTarjeta = trim($input['vencimiento_tarjeta']);
-            $cvcTarjeta = trim($input['cvc_tarjeta']);
-            $nombreTarjeta = trim(strtoupper($input['nombre_tarjeta']));
+            /* ----------------------------------------------------
+         * 1) ¿VIENE ID_USER?
+         * ---------------------------------------------------- */
+            $nuevoUsuario = false;
+            $userId = (int)($in['id_user'] ?? 0);
 
-            // Validaciones básicas
-            if ($idUser <= 0) {
-                return $this->jsonError('ID de usuario inválido', 400);
+            if ($userId <= 0) {
+                foreach (['email', 'password', 'first_name', 'last_name'] as $f) {
+                    if (empty(trim($in[$f] ?? ''))) {
+                        return $this->jsonError("El campo {$f} es requerido", 400);
+                    }
+                }
+                $email = strtolower(trim($in['email']));
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    return $this->jsonError('Formato de email inválido', 400);
+                }
+                if (Users::findByEmail($email)) {
+                    return $this->jsonError('Email ya registrado', 409);
+                }
+                if (strlen($in['password']) < 6) {
+                    return $this->jsonError('La contraseña debe tener al menos 6 caracteres', 400);
+                }
+                $nuevoUsuario = true;
             }
 
-            // Validar formato de número de tarjeta (solo números, 13-19 dígitos)
-            $numeroTarjetaLimpio = preg_replace('/\s+/', '', $numeroTarjeta);
-            if (!preg_match('/^\d{13,19}$/', $numeroTarjetaLimpio)) {
+            /* ----------------------------------------------------
+         * 2) VALIDAR TARJETA
+         * ---------------------------------------------------- */
+            foreach (['numero_tarjeta', 'vencimiento_tarjeta', 'cvc_tarjeta', 'nombre_tarjeta'] as $f) {
+                if (empty(trim($in[$f] ?? ''))) {
+                    return $this->jsonError("El campo {$f} es requerido", 400);
+                }
+            }
+
+            $numLimpio = preg_replace('/\s+/', '', $in['numero_tarjeta']);
+            if (!preg_match('/^\d{13,19}$/', $numLimpio)) {
                 return $this->jsonError('Número de tarjeta inválido', 400);
             }
-
-            // Validar formato de fecha de vencimiento (MM/YY)
-            if (!preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $vencimientoTarjeta)) {
-                return $this->jsonError('Formato de fecha de vencimiento inválido (MM/YY)', 400);
+            if (!preg_match('/^(0[1-9]|1[0-2])\/\d{2}$/', $in['vencimiento_tarjeta'])) {
+                return $this->jsonError('Formato de vencimiento inválido (MM/YY)', 400);
             }
-
-            // Validar CVC (3 o 4 dígitos)
-            if (!preg_match('/^\d{3,4}$/', $cvcTarjeta)) {
+            if (!preg_match('/^\d{3,4}$/', $in['cvc_tarjeta'])) {
                 return $this->jsonError('CVC inválido', 400);
             }
-
-            // Validar nombre (al menos 3 caracteres)
-            if (strlen($nombreTarjeta) < 3) {
+            if (strlen(trim($in['nombre_tarjeta'])) < 3) {
                 return $this->jsonError('El nombre en la tarjeta debe tener al menos 3 caracteres', 400);
             }
 
-            // Verificar que el usuario existe
-            $usuario = Users::findFirst([
-                'conditions' => 'id = :id:',
-                'bind' => ['id' => $idUser]
-            ]);
+            /* ----------------------------------------------------
+         * 3) TRANSACCIÓN
+         * ---------------------------------------------------- */
+            $this->db->begin();
 
-            if (!$usuario) {
-                return $this->jsonError('Usuario no encontrado', 404);
-            }
+            /* ---- Crear usuario si corresponde ---- */
+            if ($nuevoUsuario) {
+                $user = new Users();
+                $user->email      = $email;
+                $user->password   = $in['password']; // se hashea en beforeSave()
+                $user->first_name = ucfirst(trim($in['first_name']));
+                $user->last_name  = ucfirst(trim($in['last_name']));
 
-            // Verificar si el usuario ya tiene esta tarjeta registrada
-            $tarjetaExistente = TblTarjetaPago::findFirst([
-                'conditions' => 'id_user = :id_user: AND numero_tarjeta = :numero_tarjeta:',
-                'bind' => [
-                    'id_user' => $idUser,
-                    'numero_tarjeta' => $numeroTarjetaLimpio
-                ]
-            ]);
-
-            if ($tarjetaExistente) {
-                // Si existe, actualizar los datos
-                $tarjetaExistente->vencimiento_tarjeta = $vencimientoTarjeta;
-                $tarjetaExistente->cvc_tarjeta = $cvcTarjeta; // ⚠️ NOTA: En producción, considera no guardar el CVC
-                $tarjetaExistente->nombre_tarjeta = $nombreTarjeta;
-
-                if (!$tarjetaExistente->save()) {
-                    $errors = [];
-                    foreach ($tarjetaExistente->getMessages() as $message) {
-                        $errors[] = $message->getMessage();
-                    }
-                    return $this->jsonError('Error al actualizar la tarjeta: ' . implode(', ', $errors), 400);
+                if (!$user->save()) {
+                    $this->db->rollback();
+                    $msg = implode(', ', array_map(
+                        function ($m) {
+                            return $m->getMessage();
+                        },
+                        $user->getMessages()
+                    ));
+                    return $this->jsonError($msg, 400);
                 }
-
-                $tarjeta = $tarjetaExistente;
-                $mensaje = 'Tarjeta actualizada exitosamente';
+                $userId = (int) $user->id;
             } else {
-                // Crear nueva tarjeta
-                $tarjeta = new TblTarjetaPago();
-                $tarjeta->id_user = $idUser;
-                $tarjeta->numero_tarjeta = $numeroTarjetaLimpio;
-                $tarjeta->vencimiento_tarjeta = $vencimientoTarjeta;
-                $tarjeta->cvc_tarjeta = $cvcTarjeta; // ⚠️ NOTA: En producción, considera no guardar el CVC
-                $tarjeta->nombre_tarjeta = $nombreTarjeta;
-
-                if (!$tarjeta->save()) {
-                    $errors = [];
-                    foreach ($tarjeta->getMessages() as $message) {
-                        $errors[] = $message->getMessage();
-                    }
-                    return $this->jsonError('Error al crear la tarjeta: ' . implode(', ', $errors), 400);
+                $user = Users::findFirst($userId);
+                if (!$user) {
+                    return $this->jsonError('Usuario no encontrado', 404);
                 }
-
-                $mensaje = 'Tarjeta creada exitosamente';
             }
 
-            // Log de registro exitoso
-            error_log("Card created/updated successfully for user: {$idUser}");
+            /* ---- Crear o actualizar tarjeta ---- */
+            $tarjeta = TblTarjetaPago::findFirst([
+                'conditions' => 'id_user = :u: AND numero_tarjeta = :n:',
+                'bind'       => ['u' => $userId, 'n' => $numLimpio]
+            ]) ?: new TblTarjetaPago();
+
+            $tarjeta->id_user             = $userId;
+            $tarjeta->numero_tarjeta      = $numLimpio;
+            $tarjeta->vencimiento_tarjeta = $in['vencimiento_tarjeta'];
+            $tarjeta->cvc_tarjeta         = $in['cvc_tarjeta']; // ⚠️ no guardes esto en prod.
+            $tarjeta->nombre_tarjeta      = strtoupper(trim($in['nombre_tarjeta']));
+
+            if (!$tarjeta->save()) {
+                $this->db->rollback();
+                $msg = implode(', ', array_map(
+                    function ($m) {
+                        return $m->getMessage();
+                    },
+                    $tarjeta->getMessages()
+                ));
+                return $this->jsonError('Error al grabar la tarjeta: ' . $msg, 400);
+            }
+
+            $this->db->commit();
+
+            /* ----------------------------------------------------
+         * 5) TOKEN (solo si hay usuario nuevo)
+         * ---------------------------------------------------- */
+            $token = $nuevoUsuario ? $this->generateJWT($user) : null;
 
             return $this->jsonResponse([
-                'tarjeta' => [
-                    'id' => (int)$tarjeta->id,
-                    'numero_tarjeta' => $tarjeta->numero_tarjeta,
+                'user'  => [
+                    'id'         => $userId,
+                    'email'      => $user->email,
+                    'first_name' => $user->first_name,
+                    'last_name'  => $user->last_name,
+                    'full_name'  => $user->first_name . ' ' . $user->last_name,
+                    'created_at' => $user->created_at
+                ],
+                'card'  => [
+                    'id'                  => (int) $tarjeta->id,
+                    'numero_tarjeta'      => $tarjeta->numero_tarjeta, // enmascara después si quieres
                     'vencimiento_tarjeta' => $tarjeta->vencimiento_tarjeta,
-                    'nombre_tarjeta' => $tarjeta->nombre_tarjeta,
-                    'fecha_creacion' => $tarjeta->fecha_creacion
-                ]
-            ], 200, $mensaje);
+                    'nombre_tarjeta'      => $tarjeta->nombre_tarjeta,
+                    'fecha_creacion'      => $tarjeta->fecha_creacion
+                ],
+                'token'      => $token,
+                'token_type' => $token ? 'Bearer' : null,
+                'expires_in' => $token ? $this->config->jwt->expire : null
+            ], 200, $nuevoUsuario ? 'Usuario y tarjeta creados' : 'Tarjeta registrada/actualizada');
         } catch (Exception $e) {
+            if ($this->db->isUnderTransaction()) {
+                $this->db->rollback();
+            }
             error_log('Create Card Error: ' . $e->getMessage());
             return $this->jsonError('Error interno del servidor', 500);
         }
     }
+
+
     public function registroeventoAction()
     {
         try {
@@ -1107,40 +1132,27 @@ class AuthController extends BaseController
                 ];
             }
 
-            // ✅ OBTENER TODOS LOS ALIADOS (sin filtrar por evento)
-            $aliados = TblAliados::find([
-                'order' => 'nombre ASC'
-            ]);
-
+            $eventoAliados = TblEventoAliado::findByEvento($evento->id);
             $aliadosData = [];
-            foreach ($aliados as $aliado) {
-                $aliadosData[] = [
-                    'id' => (int)$aliado->id,
-                    'nombre' => $aliado->nombre,
-                    'imagen' => $aliado->imagen,
-                    'categoria_id' => (int)$aliado->id_categoria,
-                    'fecha_creacion' => $aliado->fecha_creacion
-                ];
+
+            foreach ($eventoAliados as $eventoAliado) {
+                $aliado = TblAliados::findFirst([
+                    'conditions' => 'id = :id:',
+                    'bind' => ['id' => $eventoAliado->id_aliado]
+                ]);
+
+                if ($aliado) {
+                    $aliadosData[] = [
+                        'id' => (int)$aliado->id,
+                        'nombre' => $aliado->nombre,
+                        'imagen' => $aliado->imagen,
+                        'categoria_id' => (int)$aliado->id_categoria,
+                        'fecha_creacion' => $aliado->fecha_creacion,
+                        'fecha_asignacion' => $eventoAliado->fecha_creacion // Fecha cuando se asoció al evento
+                    ];
+                }
             }
-            $this->processImagenesEvento = function ($imagenesString) {
-                if (!$imagenesString) {
-                    return [];
-                }
 
-                // Intentar decodificar como JSON válido primero
-                $decoded = json_decode($imagenesString, true);
-                if ($decoded !== null) {
-                    return $decoded;
-                }
-
-                // Si falla, procesar formato incorrecto: {url1,url2}
-                if (preg_match('/^\{(.+)\}$/', $imagenesString, $matches)) {
-                    $urls = explode(',', $matches[1]);
-                    return array_map('trim', $urls);
-                }
-
-                return [];
-            };
 
 
             // Construir data del evento
